@@ -1,7 +1,8 @@
 const cluster = require("cluster");
 const http = require("http");
 const { setupMaster } = require("@socket.io/sticky");
-const enc_dec = require('./helper/Enc_Dec');
+const dotenv = require("dotenv");
+dotenv.config();
 const WORKERS_COUNT = 4;
 
 if (cluster.isMaster) {
@@ -20,6 +21,7 @@ if (cluster.isMaster) {
   setupMaster(httpServer, {
     loadBalancingMethod: "least-connection", // either "random", "round-robin" or "least-connection"
   });
+
   const PORT = process.env.PORT || 5000;
 
   httpServer.listen(PORT, () =>
