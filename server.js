@@ -54,6 +54,10 @@ io.use(async (socket, next) => {
 
 });
 
+
+// cathing errors
+io.of('/').adapter.on('error', (err)=>{console.log('adapter error',err)});
+
 // socket connection
 io.on("connection", async (socket) => {
     // persist session
