@@ -5,7 +5,12 @@ const { Server } = require("socket.io");
 const { v4: uuidv4 } = require('uuid');
 const httpServer = createServer(app);
 const Radis = require('ioredis');
-const redisClient = new Radis();
+const redisClient = new Radis({
+    port : 6379,
+    host : '127.0.0.1',
+    db : 0
+});
+
 const  {Ncrypto} = require("./helper/Enc_Dec");
 
 const io = new Server(httpServer, {
@@ -19,8 +24,8 @@ const io = new Server(httpServer, {
 });
 
 const { setupWorker } = require("@socket.io/sticky");
-const { RedisSessionStore } = require('./config/sessionStore');
-const { RedisMessageStore } = require('./config/messageStore');
+const { RedisSessionStore } = require('./store/sessionStore');
+const { RedisMessageStore } = require('./store/messageStore');
 
 const sessionStores = new RedisSessionStore(redisClient);
 const messageStores = new RedisMessageStore(redisClient);
