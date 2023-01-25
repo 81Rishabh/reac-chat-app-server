@@ -5,11 +5,7 @@ const { Server } = require("socket.io");
 const { v4: uuidv4 } = require('uuid');
 const httpServer = createServer(app);
 const Radis = require('ioredis');
-const redisClient = new Radis({
-    port : 6379,
-    host : '127.0.0.1',
-    db : 0
-});
+const redisClient = new Radis(6379, "192.168.1.1");
 
 const  {Ncrypto} = require("./helper/Enc_Dec");
 
