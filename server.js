@@ -5,7 +5,11 @@ const { Server } = require("socket.io");
 const { v4: uuidv4 } = require('uuid');
 const httpServer = createServer(app);
 const Radis = require('ioredis');
-const redisClient = new Radis(6379, "192.168.1.1");
+const redisClient = new Radis({
+    port: 6379,
+    host : 'localhost',
+    connectTimeout: 10000
+});
 
 const  {Ncrypto} = require("./helper/Enc_Dec");
 
@@ -17,7 +21,7 @@ const io = new Server(httpServer, {
         pubClient: redisClient,
         subClient: redisClient.duplicate()
     })
-});
+}); 
 
 const { setupWorker } = require("@socket.io/sticky");
 const { RedisSessionStore } = require('./store/sessionStore');
