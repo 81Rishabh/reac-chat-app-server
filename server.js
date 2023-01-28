@@ -5,17 +5,13 @@ const { Server } = require("socket.io");
 const { v4: uuidv4 } = require('uuid');
 const httpServer = createServer(app);
 const Radis = require('ioredis');
-const redisClient = new Radis({
-    port: 6379,
-    host : 'localhost',
-    connectTimeout: 10000
-});
-
+const redisClient = new Radis();
 const  {Ncrypto} = require("./helper/Enc_Dec");
 
+console.log(process.env.CLIENT_URL);
 const io = new Server(httpServer, {
     cors: {
-        origin: process.env.CLIENT_URL || "http://localhost:3000",
+        origin: process.env.CLIENT_URL || 'http://localhost:3000',
     },
     adapter: require('socket.io-redis')({
         pubClient: redisClient,
@@ -157,6 +153,8 @@ io.on("connection", async (socket) => {
     });
 });
 
+const PORT = process.env.PORT || 5000;
+
 setupWorker(io);
 
-// httpServer.listen(5000 , () => console.log('chat server is started.'));
+// httpServer.listen(PORT , () => console.log('chat server is started. '+PORT));

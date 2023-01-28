@@ -2,13 +2,13 @@ const cluster = require("cluster");
 const http = require("http");
 const { setupMaster } = require("@socket.io/sticky");
 const dotenv = require("dotenv");
+const numCPUs = require("os").cpus().length;
 dotenv.config();
-const WORKERS_COUNT = 4;
 
 if (cluster.isMaster) {
   console.log(`Master ${process.pid} is running`);
 
-  for (let i = 0; i < WORKERS_COUNT; i++) {
+  for (let i = 0; i < numCPUs; i++) {
     cluster.fork();
   }
 
