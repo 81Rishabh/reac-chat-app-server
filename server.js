@@ -5,18 +5,24 @@ const { Server } = require("socket.io");
 const { v4: uuidv4 } = require('uuid');
 const httpServer = createServer(app);
 const Radis = require('ioredis');
-const redisClient = new Radis();
+const cors = require('cors');
+const redisClient = new Radis({
+    host: process.env.REDIS_HOST,
+    port: process.env.REDIS_PORT,
+    password: process.env.REDIS_PASSWORD,
+});
 const  {Ncrypto} = require("./helper/Enc_Dec");
 
-console.log(process.env.CLIENT_URL);
+// cors
+app.use(cors());
+
+// socket connection
 const io = new Server(httpServer, {
-    cors: {
-        origin: process.env.CLIENT_URL || 'http://localhost:3000',
-    },
+    origin : process.env.CLIENT_URL || 'http://localhost:3000',
     adapter: require('socket.io-redis')({
         pubClient: redisClient,
         subClient: redisClient.duplicate()
-    })
+    }),
 }); 
 
 const { setupWorker } = require("@socket.io/sticky");
