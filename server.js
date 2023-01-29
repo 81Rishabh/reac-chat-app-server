@@ -26,6 +26,9 @@ const io = new Server(httpServer, {
     }
 }); 
 
+// getting client url
+console.log(process.env.CLIENT);
+
 const pubClient = redisClient;
 const subClient = redisClient.duplicate();
 
