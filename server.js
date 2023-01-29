@@ -13,7 +13,7 @@ const redisClient = new Radis({
     host: process.env.REDIS_HOST,
     port: process.env.REDIS_PORT,
     password: process.env.REDIS_PASSWORD,
-    autoResubscribe: true
+    autoResubscribe : false
 });
 
 
@@ -27,11 +27,11 @@ const subClient = redisClient.duplicate();
 
 pubClient.on("error", (err) => {
     console.log(err.message);
-});
+  });
   
-subClient.on("error", (err) => {
+  subClient.on("error", (err) => {
     console.log(err.message);
-});
+  });
 
 io.adapter(createAdapter(pubClient, subClient));
 
