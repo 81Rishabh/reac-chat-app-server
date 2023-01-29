@@ -4,26 +4,27 @@ const app = express();
 const { Server } = require("socket.io");
 const { v4: uuidv4 } = require('uuid');
 const httpServer = createServer(app);
+const  {Ncrypto} = require("./helper/Enc_Dec");
 const Radis = require('ioredis');
-const cors = require('cors');
+const { createAdapter } = require("@socket.io/redis-adapter");
+
+// create redis client connection
 const redisClient = new Radis({
     host: process.env.REDIS_HOST,
     port: process.env.REDIS_PORT,
     password: process.env.REDIS_PASSWORD,
 });
-const  {Ncrypto} = require("./helper/Enc_Dec");
 
-// cors
-app.use(cors());
 
 // socket connection
 const io = new Server(httpServer, {
     origin : process.env.CLIENT_URL || 'http://localhost:3000',
-    adapter: require('socket.io-redis')({
-        pubClient: redisClient,
-        subClient: redisClient.duplicate()
-    }),
 }); 
+
+const pubClient = redisClient;
+const subClient = redisClient.duplicate();
+
+io.adapter(createAdapter(pubClient, subClient));
 
 const { setupWorker } = require("@socket.io/sticky");
 const { RedisSessionStore } = require('./store/sessionStore');
