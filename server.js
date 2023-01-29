@@ -13,6 +13,7 @@ const redisClient = new Radis({
     host: process.env.REDIS_HOST,
     port: process.env.REDIS_PORT,
     password: process.env.REDIS_PASSWORD,
+    autoResubscribe: true
 });
 
 
