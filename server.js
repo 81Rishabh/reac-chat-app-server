@@ -1,12 +1,15 @@
 const express = require("express");
-const { createServer } = require("http");
 const app = express();
+const { createServer } = require("http");
 const { Server } = require("socket.io");
 const { v4: uuidv4 } = require('uuid');
-const httpServer = createServer(app);
-const  {Ncrypto} = require("./helper/Enc_Dec");
-const Radis = require('ioredis');
+const {Ncrypto} = require("./helper/Enc_Dec");
 const { createAdapter } = require("@socket.io/redis-adapter");
+const Radis = require('ioredis');
+const httpServer = createServer(app);
+const cors = require('cors');
+
+app.use(cors());
 
 // create redis client connection
 const redisClient = new Radis({
@@ -19,7 +22,9 @@ const redisClient = new Radis({
 
 // socket connection
 const io = new Server(httpServer, {
-    origin : process.env.CLIENT_URL || 'http://localhost:3000',
+    cors : {
+        origin : process.env.CLIENT_URL || 'http://localhost:3000',
+    }
 }); 
 
 const pubClient = redisClient;
@@ -169,7 +174,10 @@ io.on("connection", async (socket) => {
     });
 });
 
-const PORT = process.env.PORT || 5000;
+process.on('unhandledRejection', error => {
+    // Won't execute
+    console.log('unhandledRejection', error.message);
+});
 
 setupWorker(io);
 
