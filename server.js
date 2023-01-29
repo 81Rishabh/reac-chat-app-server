@@ -24,6 +24,14 @@ const io = new Server(httpServer, {
 const pubClient = redisClient;
 const subClient = redisClient.duplicate();
 
+pubClient.on("error", (err) => {
+    console.log(err.message);
+});
+  
+subClient.on("error", (err) => {
+    console.log(err.message);
+});
+
 io.adapter(createAdapter(pubClient, subClient));
 
 const { setupWorker } = require("@socket.io/sticky");
