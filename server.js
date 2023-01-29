@@ -16,14 +16,13 @@ const redisClient = new Radis({
     host: process.env.REDIS_HOST,
     port: process.env.REDIS_PORT,
     password: process.env.REDIS_PASSWORD,
-    autoResubscribe : false
 });
 
 
 // socket connection
 const io = new Server(httpServer, {
     cors : {
-        origin : process.env.CLIENT_URL || 'http://localhost:3000',
+        origin : process.env.CLIENT,
     }
 }); 
 

@@ -5,7 +5,7 @@
   "main": "cluster.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon cluster.js"
+    "start": "node cluster.js"
   },
   "author": "rishabh",
   "license": "ISC",
