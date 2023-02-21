@@ -1,186 +1,83 @@
-const express = require("express");
+const express = require('express');
 const app = express();
-const { createServer } = require("http");
-const { Server } = require("socket.io");
-const { v4: uuidv4 } = require('uuid');
-const {Ncrypto} = require("./helper/Enc_Dec");
-const { createAdapter } = require("@socket.io/redis-adapter");
-const Radis = require('ioredis');
-const httpServer = createServer(app);
+const port = 5000;
+const morgan = require('morgan');
+const cookieParser = require('cookie-parser');
+const session = require('express-session');
+const passport = require('passport');
 const cors = require('cors');
+const {errorHandler} = require('./middleware/error');
+const path = require('path');
 
-app.use(cors());
 
-// create redis client connection
-const redisClient = new Radis({
-    host: process.env.REDIS_HOST,
-    port: process.env.REDIS_PORT,
-    password: process.env.REDIS_PASSWORD,
+// enviorment configuration
+require('dotenv').config();
+
+// db connection
+const connectDB = require('./db');
+connectDB();
+
+
+
+// logger middileware
+app.use(morgan('tiny'));
+
+// cookie parser
+app.use(cookieParser());
+
+
+// cross origin resourse midilware
+app.use(cors({origin: '*'}));
+
+// passportjs config
+require('./config/passport-local')(passport);
+require('./config/passport-jwt')(passport);
+
+// body parser
+app.use(express.urlencoded({extended : false}));
+app.use(express.json());
+
+
+app.use('/uploads' , express.static(__dirname + '/uploads'));
+// express session midilware
+
+app.use(session({
+    name : 'chitchat',
+    secret : 'hbahsir',
+    saveUninitialized : false,
+    resave : false,
+    cookie : {
+        maxAge : (1000 * 60 * 100)
+    },
+}));
+
+// passport midilware
+app.use(passport.initialize());
+app.use(passport.session());
+
+
+// configure routes
+app.use('/api' , require('./routes/index'));
+
+// server frontend
+if(process.env.NODE_ENV === 'production') {
+    app.use(express.static(path.join(__dirname, '../frontend/build')));
+
+    // server index.html file
+    app.get("*" , (req,res) => {
+        res.sendFile(
+            path.resolve(__dirname , '../' , 'frontend' , 'build' , 'index.html')
+        )
+    });
+} else {
+   app.get('/' , (req,res) => res.send("Please set to production..."));
+}
+
+// error handlder middleware
+app.use(errorHandler);
+
+let server = app.listen(process.env.PORT, () => {
+    console.log("server is running on the port" , process.env.PORT || port);
 });
 
-
-// socket connection
-const io = new Server(httpServer, {
-    cors : {
-        origin : process.env.CLIENT,
-    }
-}); 
-
-// getting client url
-console.log(process.env.CLIENT);
-
-const pubClient = redisClient;
-const subClient = redisClient.duplicate();
-
-pubClient.on("error", (err) => {
-    console.log(err.message);
-  });
-  
-  subClient.on("error", (err) => {
-    console.log(err.message);
-  });
-
-io.adapter(createAdapter(pubClient, subClient));
-
-const { setupWorker } = require("@socket.io/sticky");
-const { RedisSessionStore } = require('./store/sessionStore');
-const { RedisMessageStore } = require('./store/messageStore');
-
-const sessionStores = new RedisSessionStore(redisClient);
-const messageStores = new RedisMessageStore(redisClient);
-
-// middilware for check username && session establizing
-io.use(async (socket, next) => {
-    const sessionID = socket.handshake.auth.sessionID;
-
-    if (sessionID) {
-        //  find existing session
-        const session = await sessionStores.findSession(sessionID);
-        // console.log("session-id", session);
-        if (session) {
-            socket.sessionID = sessionID;
-            socket.userID = session.userID;
-            socket.username = session.username;
-            return next();
-        }
-    }
-
-    // send message to console on server side
-    const username = socket.handshake.auth.username;
-    console.log(`${username} is joined...`, socket.userID);
-    if (!username) { return next(new Error("invalid username")); }
-
-    // create new session
-    socket.userID = uuidv4();
-    socket.sessionID = uuidv4();
-    socket.username = username;
-    next();
-
-});
-
-
-// cathing errors
-io.of('/').adapter.on('error', (err)=>{console.log('adapter error',err)});
-
-// socket connection
-io.on("connection", async (socket) => {
-    // persist session
-    sessionStores.saveSession(socket.sessionID, {
-        userID: socket.userID,
-        username: socket.username,
-        isOnline: true
-    });
-
-    //send session detail to client
-    socket.emit("session", {
-        sessionID: socket.sessionID,
-        userID: socket.userID
-    });
-
-    socket.join(socket.userID);
-    // // listing all the users
-    
-    // GET ALL THE MESSAGE AND SESSIONS
-    const users = [];
-    const [messages, sessions] = await Promise.all([
-        messageStores.findMessagesForUser(socket.userID),
-        sessionStores.findAllSessions(),
-    ]);
-   
-
-    // MAP ALL THE USERS
-   const mapPerUser = new Map();
-   messages.forEach(message => {
-      const {from , to} = message;
-      let otherUser = socket.userID === from ? to : from;
-      if(mapPerUser.has(otherUser)) {
-         mapPerUser.get(otherUser).push(message);
-      }
-      else {
-        mapPerUser.set(otherUser, [message]);
-      }
-   });
-   
-    // SET USERS SESSSION AND MESSAGE
-    sessions.forEach(session => {
-        users.push({
-            userId: session.userID,
-            username: session.username,
-            isOnline: session.isOnline,
-            messages: mapPerUser.get(session.userID) || []
-        });
-    })
-
-    // send users to client side
-    socket.emit('users', users);
-
-    // notify existing users
-    socket.broadcast.emit("user-connected", {
-        userId: socket.userID,
-        username: socket.username,
-        isOnline: true,
-        messages: []
-    });
-
-
-    // private message
-    socket.on('private-message', ({ content, to }) => {
-        // var enc_message = CryptoJS.AES.encrypt(content, 'secret key 123').toString();
-        let enc_message = Ncrypto.encrypt(content);
-        let message = {
-            content:enc_message,
-            from: socket.userID,
-            to,
-            key : Ncrypto.secretKey()
-        }
-        socket.to(to).to(socket.userID).emit("recipient-message", message);
-        messageStores.saveMessage(message);
-    });
-
-    // disconnect
-    // notify users upon disconnection
-    socket.on("disconnect", async () => {
-        //   socket.broadcast.emit("user disconnected", socket.);
-        const matchingSockets = await io.in(socket.userID).fetchSockets();
-        const isDisconnected = matchingSockets.size === 0;
-        if (isDisconnected) {
-            // notify other users
-            socket.broadcast.emit("user disconnected", socket.userID);
-            // update the connection status of the session
-            sessionStores.saveSession(socket.sessionID, {
-                userID: socket.userID,
-                username: socket.username,
-                isOnline: false,
-            });
-        }
-    });
-});
-
-process.on('unhandledRejection', error => {
-    // Won't execute
-    console.log('unhandledRejection', error.message);
-});
-
-setupWorker(io);
-
-// httpServer.listen(PORT , () => console.log('chat server is started. '+PORT));
+require('./socket/socket').chat_sockets(server);
